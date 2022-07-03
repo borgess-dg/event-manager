@@ -1,0 +1,1 @@
+gcc -Wall ./core/src/main.c ./core/src/HandleConsole.c -o ./main
