@@ -1,1 +1,1 @@
-gcc -Wall ./core/src/main.c ./core/src/HandleConsole.c -o ./main
+gcc -Wall ./core/src/main.c ./core/src/HandleConsole.c ./core/src/Register.c -o ./debug/main

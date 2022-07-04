@@ -5,50 +5,89 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <conio.h>
+#include <string.h>
+#include <stdbool.h>
 
 #include "../include/KeyEvents.h"
 #include "../include/StringTypes.h"
+#include "../include/Register.h"
 
 //Handle the elements that will be used in Console Menu
-StdOutput* HandleConsoleElements(void){
+StdOutput* HandleConsoleElements(const char* SIGNAL){
     static StdOutput menuOptions[6];
     //Fill the menu options array
-    strcpy(menuOptions[0].output, "Cadastrar evento.\n");
-    strcpy(menuOptions[1].output, "Pesquisar Evento.\n");
-    strcpy(menuOptions[2].output, "Ingressos Vendidos.\n");
-    strcpy(menuOptions[3].output, "Exibir resultado por evento.\n");
-    strcpy(menuOptions[4].output, "Exibir resultado geral.\n");
-    strcpy(menuOptions[5].output, "Sair.");
+    if(!strcmp(SIGNAL, CS_MENU)){
+        strcpy(menuOptions[0].output, "Cadastrar evento.\n");
+        strcpy(menuOptions[1].output, "Pesquisar Evento.\n");
+        strcpy(menuOptions[2].output, "Ingressos Vendidos.\n");
+        strcpy(menuOptions[3].output, "Exibir resultado por evento.\n");
+        strcpy(menuOptions[4].output, "Exibir resultado geral.\n");
+        strcpy(menuOptions[5].output, "Sair.");
+    }
+    if(!strcmp(SIGNAL, CS_YN)){
+        strcpy(menuOptions[0].output, "> SIM.");
+        strcpy(menuOptions[1].output, "\t> NÃO.\n");
+    }
 
     return menuOptions;
 }
 
 //Get Console elements and call Menu
-void Console(){
-    StdOutput* consoleElements = HandleConsoleElements();
-    RunConsole(consoleElements);
+bool Console(const char* SIGNAL, int ITEMS){
+    StdOutput* consoleElements = HandleConsoleElements(SIGNAL);
+    system("cls");
+    printf("\e[?25l");
+    return RunConsole(consoleElements, SIGNAL, ITEMS);
 }
 
 //Run the Menu in Console
-void RunConsole(StdOutput* consoleElements){
-    Event getEvent;
+bool RunConsole(StdOutput* consoleElements, const char* SIGNAL, int ITEMS){
+    ConsoleEvent getEvent;
     while(true){
-        getEvent = HandleEvents(consoleElements);
-        if(getEvent.keyPressed == KEY_ENTER)
+        getEvent = HandleEvents(consoleElements, ITEMS);
+        //Determine the action after menu choices
+        if(getEvent.keyPressed == KEY_ENTER){
+            if(!strcmp(SIGNAL, CS_MENU))
+                switch(getEvent.cursor){
+                    //Call the function to Register Events
+                    case 0:
+                        EventRegister();
+                        break;
+                    //This case makes the exit function
+                    case 5:
+                        StandardConsole();
+                        break;
+                    default:
+                        EventRegister();
+                        break;
+                }
+            else if(!strcmp(SIGNAL, CS_YN)){
+                switch(getEvent.cursor){
+                    case 0:
+                        getEvent.yesOrNot = true;
+                        break;
+                    case 1:
+                        getEvent.yesOrNot = false;
+                        break;
+                    default:
+                        getEvent.yesOrNot = true;
+                        break;
+                }
+            }
             break;
+        }
         ClearConsole();
     }
+    return getEvent.yesOrNot;
 }
 
 //Refresh the Console Menu based on the position of cursor
-void RefreshConsole(StdOutput* menuOptions, int cursorPosition){
+void RefreshConsole(StdOutput* menuOptions, int cursorPosition, int ITEMS){
 
-    system("cls");
-    printf("\e[?25l");
-    for(int i = 0; i < 6; i++)
+    for(int i = 0; i < ITEMS; i++)
             if(i == cursorPosition){
                 printf("\033[0;31m");
-                printf("%s%s", "-> ", menuOptions[i].output);
+                printf("%s", menuOptions[i].output);
             }
             else{
                 printf("\033[0m");
@@ -57,24 +96,22 @@ void RefreshConsole(StdOutput* menuOptions, int cursorPosition){
 }
 
 //Handle the keyboard events and returns the Event to RunConsole() loop's
-Event HandleEvents(StdOutput* menuOptions){
+ConsoleEvent HandleEvents(StdOutput* menuOptions, int ITEMS){
     static int cursorPosition = 0;
-    Event e;
-    RefreshConsole(menuOptions, cursorPosition);
+    ConsoleEvent e;
+    RefreshConsole(menuOptions, cursorPosition, ITEMS);
     e.keyPressed = getch();
     if(e.keyPressed == KEY_DOWN){
-        if(cursorPosition == 5)
+        if(cursorPosition == ITEMS-1)
             cursorPosition = -1;
         cursorPosition++;
     }
     else if(e.keyPressed == KEY_UP){
-        if(cursorPosition == 0)
-            cursorPosition = 6;
+        if(cursorPosition == ITEMS-ITEMS)
+            cursorPosition = ITEMS;
         cursorPosition--;
     }
-    else if(e.keyPressed == KEY_ENTER){
-            //Call a X function
-    }
+    e.cursor = cursorPosition;
     return e;
 }
 
@@ -85,5 +122,11 @@ void ClearConsole(void)
     cursorPosition.X = 0;
     cursorPosition.Y = 0;
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cursorPosition);
-    printf("\e[2J\e[2H");
+}
+
+//Make Console return to default settings
+void StandardConsole(void){
+    system("cls");
+    printf("\e[?25h");
+    printf("\033[0m");
 }
